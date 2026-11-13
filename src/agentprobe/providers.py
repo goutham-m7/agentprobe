@@ -15,6 +15,24 @@ class ProviderError(RuntimeError):
     """Safe, deliberately body-free provider failure."""
 
 
+def json_object(text: str) -> dict:
+    def unique(pairs):
+        value = {}
+        for key, item in pairs:
+            if key in value:
+                raise ValueError("Model JSON contains duplicate keys")
+            value[key] = item
+        return value
+
+    def invalid_constant(value):
+        raise ValueError("Model JSON contains a non-finite number")
+
+    data = json.loads(text, object_pairs_hook=unique, parse_constant=invalid_constant)
+    if not isinstance(data, dict):
+        raise ValueError("Model JSON must be an object")
+    return data
+
+
 class Provider(Protocol):
     name: str
 
@@ -91,7 +109,7 @@ class OpenAIProvider:
                 ToolCall(
                     id=call["id"],
                     name=call["function"]["name"],
-                    arguments=json.loads(call["function"]["arguments"]),
+                    arguments=json_object(call["function"]["arguments"]),
                 )
                 for call in message.get("tool_calls", [])
             ]

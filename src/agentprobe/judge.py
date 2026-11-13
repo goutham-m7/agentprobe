@@ -3,7 +3,7 @@
 import json
 
 from agentprobe.models import AgentSpec, Grades, Message
-from agentprobe.providers import Provider
+from agentprobe.providers import Provider, json_object
 from agentprobe.spec import rubric
 
 
@@ -30,7 +30,7 @@ class Judge:
             ],
             json_mode=True,
         )
-        grades = Grades.model_validate_json(reply.content)
+        grades = Grades.model_validate(json_object(reply.content))
         sources = []
         for message in messages:
             if message.role == "assistant":

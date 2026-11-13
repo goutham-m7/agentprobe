@@ -7,7 +7,7 @@ from collections import Counter
 from pydantic import Field
 
 from agentprobe.models import PERSONAS, AgentSpec, Message, Model, Persona, Scenario, Suite, Text
-from agentprobe.providers import Provider
+from agentprobe.providers import Provider, json_object
 
 
 class Plan(Model):
@@ -42,7 +42,7 @@ async def generate_suite(
         ],
         json_mode=True,
     )
-    plans = Plans.model_validate_json(reply.content)
+    plans = Plans.model_validate(json_object(reply.content))
     if Counter(plan.persona for plan in plans.scenarios) != Counter(
         {persona: per_persona for persona in PERSONAS}
     ):
