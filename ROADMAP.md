@@ -14,11 +14,11 @@ Local-only milestone. No paid model evaluation or remote publication is implied.
 
 ### 02. Reply-dependent conversation plans
 
-- Status: planned
+- Status: complete
 - Problem: Fixed prompts cannot follow up differently on a refusal and a disclosure.
 - Acceptance: Support ordered literal reply branches after a numbered user turn, validate destinations and preserve bounded execution. Existing fixed suites still load.
 - Test plan: Runner tests prove matched, unmatched, case-insensitive and invalid branch paths; tool calls still end execution.
-- Delivery commits: pending
+- Delivery commits: `1d22b89..f39b5f2`
 
 ### 03. Interactive human annotation
 

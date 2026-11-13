@@ -19,6 +19,7 @@ from agentprobe.calibration import LabelSet, calibrate
 from agentprobe.comparison import compare
 from agentprobe.demo_agents import broken_agent, demo_spec, good_agent
 from agentprobe.judge import Judge
+from agentprobe.labelling import label_run
 from agentprobe.mock import MockProvider
 from agentprobe.models import Suite
 from agentprobe.providers import OpenAIProvider, ProviderError
@@ -119,6 +120,10 @@ def parser() -> argparse.ArgumentParser:
     calibration.add_argument("--concurrency", type=int, default=6)
     calibration.add_argument("--timeout", type=float, default=60)
     provider_options(calibration)
+    label = commands.add_parser("label", help="Blindly annotate complete run transcripts")
+    label.add_argument("run", type=Path)
+    label.add_argument("--labeler", required=True)
+    label.add_argument("--out", type=Path, required=True)
     return root
 
 
@@ -245,6 +250,11 @@ async def demo(args) -> int:
 async def execute(args) -> int:
     if args.out is not None and args.out.exists():
         raise FileExistsError(f"Refusing to overwrite {args.out}; choose a new --out")
+    if args.command == "label":
+        labels = label_run(read_run(args.run), args.labeler)
+        new_file(args.out, labels.model_dump_json(indent=2) + "\n")
+        print(f"Wrote {len(labels.examples)} annotated transcripts: {args.out}")
+        return 0
     if args.command == "demo":
         return await demo(args)
     if args.command == "diff":
