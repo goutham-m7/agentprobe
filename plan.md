@@ -1,16 +1,9 @@
-# Implementation and test strategy
+# v0.2 execution plan
 
-Implement validated schemas and YAML rubric derivation; deterministic suite generation;
-OpenAI-compatible provider and callable adapter; bounded conversation execution and strict
-judge; calibration; paired bootstrap; escaped reports; CLI and synthetic demo; CI and docs.
-Commit each coherent boundary with its tests. Run all tests, lint, offline demo, CLI gates,
-build/package smoke and coverage before final evidence capture.
+REGULAR coding variant: repository has no .rebaseai configuration in its root listing.
 
-Tests own public boundaries: schema parsing (unit); provider/local HTTP protocol
-(integration); runner with real callables (integration); judge malformed output (unit);
-kappa and bootstrap against known data (unit); CLI/report artifacts (integration).
-Only external model HTTP responses use a local test server. No internal logic mocking.
-Timeout tests use short-lived test callables, not clock patches. Seeded standard-library
-randomness makes statistical tests deterministic. No paid LLM quality claims, real network
-provider benchmark or browser-engine rendering tests: credentials unavailable and output is
-static semantic HTML. Evidence maps acceptance IDs to observed CLI artifacts and test names.
+Deliver ROADMAP items in numerical order, each as a specific local main commit followed by a roadmap closure commit/next delivery update. Test before implementation at the owning boundary: HTTP transport (fake remote HTTP), runner (real local callables), label CLI (subprocess stdin), calibration (paired data), artifact XML (parser), repeat CLI and packaging (real install/build).
+
+External doubles: httpx transport stands in for paid HTTP service; synthetic callables exercise deterministic/alternating behavior; no internal logic mocks. Not tested: paid endpoint availability/billing, real-human agreement, GitHub writes, arbitrary tool effects. These are explicitly outside the milestone.
+
+Canonical gates: make check, make demo, uv build, then fresh local clone and isolated wheel install. ROADMAP.md carries item status and delivery commit ranges.
