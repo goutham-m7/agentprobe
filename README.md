@@ -315,9 +315,11 @@ uv run ruff format --check .
 uv run pytest --cov=agentprobe --cov-report=term-missing --cov-fail-under=90
 ```
 
-Observed in the fresh clone: **130 tests passed; 96.21% combined statement/branch coverage**. The install,
-tests and seeded demo passed in a fresh local clone. The built wheel also ran the demo
-offline. [Verification evidence](evidence.md) records the commands, scope and limitations.
+Observed after the HTTP-fixture fix: **131 tests passed; 96.21% combined statement/branch
+coverage**, with the previously flaky HTTP CLI test passing **20 consecutive runs**.
+The earlier fresh clone passed all 130 tests then present, installation, lint and the seeded
+demo. The built wheel also ran the demo outside checkout.
+[Verification evidence](evidence.md) records commands, the backlog root cause and limits.
 
 Tests cover local HTTP wire contracts, sync/async callables, concurrency limits, full
 histories, timeout/error isolation, judge evidence, schema corruption, known kappa tables,

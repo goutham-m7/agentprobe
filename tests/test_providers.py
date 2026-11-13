@@ -11,6 +11,12 @@ from agentprobe.models import Message, Reply, Tool
 from agentprobe.providers import OpenAIProvider, ProviderError
 
 
+class LocalHTTPServer(ThreadingHTTPServer):
+    # The runner allows 256 concurrent conversations. The stdlib backlog of five
+    # resets a sixth simultaneous connection on macOS before accept() can run.
+    request_queue_size = 256
+
+
 @contextmanager
 def endpoint(response, status=200):
     received = []
@@ -34,7 +40,7 @@ def endpoint(response, status=200):
         def log_message(self, *_):
             pass
 
-    server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+    server = LocalHTTPServer(("127.0.0.1", 0), Handler)
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
     try:

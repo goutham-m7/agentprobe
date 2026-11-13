@@ -23,7 +23,8 @@ scoring/routing/statistics are not mocked.
 
 ## Fresh local clone
 
-Verified code checkout: `d753aa1`. Later changes only close the roadmap and record evidence.
+Verified clean-clone checkout: `d753aa1`. A later test-fixture-only fix and its regression
+are verified separately below; runtime code is unchanged from that clone.
 Cloned from the local repository, not GitHub:
 
 ```bash
@@ -51,10 +52,43 @@ Observed with Python 3.12.15:
   all binary sample variances **0.0000**.
 - Built `agentprobe-0.2.0.tar.gz` and `agentprobe-0.2.0-py3-none-any.whl` successfully.
 
-The development checkout also passed the full unchanged 90% coverage gate before the
-final boundary tests were added. One intermediate local socket target test returned a
-ProviderError on one conversation; a direct 18-request probe and the subsequent complete
-fresh-clone suite passed. No speculative retry was added to target requests to hide it.
+## HTTP fixture flake: diagnosed and fixed
+
+The intermittent target error was reproduced with temporary exception-chain instrumentation.
+The actual chain was `ProviderError` → `httpx.ConnectError` → `httpcore.ConnectError` →
+`OSError: All connection attempts failed` → **`ConnectionResetError: [Errno 54] Connect call failed ('127.0.0.1', 58498)`**.
+This failed during TCP connection establishment, before a request reached its handler.
+
+Root cause: Python 3.12's `ThreadingHTTPServer` inherits a listen backlog of **five**, but
+the CLI runner starts **six** conversations. On macOS the sixth connection can be reset
+while the server's accept thread is waiting to run. A controlled experiment paused all
+accepts: backlog five accepted five connections and reset the sixth with errno 54;
+backlog 256 accepted all six. Port allocation/readiness was not the problem: the listener
+was already bound/listening before the thread started.
+
+`tests/test_http_fixture.py::test_listener_queues_six_connections_before_accept_thread_runs`
+freezes accept-thread scheduling with an event while opening six actual TCP connections.
+It failed before the fix with five successes and one `ConnectionResetError(54)`, then
+passed after the fixture switched to a local server subclass with `request_queue_size=256`,
+matching the runner's supported maximum concurrency. No runtime transport changes,
+retries, assertion weakening or extra sleeps were added.
+
+Post-fix commands:
+
+```bash
+uv run pytest -q tests/test_http_fixture.py
+for i in $(seq 20); do
+  uv run pytest -q tests/test_cli_integration.py::test_run_cli_with_real_local_http_target || exit 1
+done
+uv run pytest --cov=agentprobe --cov-report=term-missing --cov-fail-under=90 -q --tb=short
+uv run ruff check .
+uv run ruff format --check .
+```
+
+Observed: deterministic regression passed; **20/20 consecutive independent pytest runs**
+passed; the subsequent full suite passed **131 tests in 12.93s, 96.21% coverage**.
+Ruff lint and all **62** format checks passed. Temporary exception instrumentation was
+outside the repository and removed; production error redaction remains unchanged.
 
 ## Installed wheel, outside source tree
 

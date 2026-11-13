@@ -15,6 +15,10 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - `agentprobe repeat` with per-scenario/per-rubric score variance, preserved trial evidence and optional flakiness exit gate.
 - Versioned roadmap and local issue drafts, distributable metadata and installation checks for the bundled offline data.
 
+### Fixed
+
+- Sized the test HTTP listener backlog for the runner's supported concurrency. The stdlib backlog of five reset a sixth simultaneous connection on macOS (`ConnectionResetError: [Errno 54]`), intermittently failing CLI HTTP integration tests. A deterministic delayed-accept regression reproduces the cause; the fix preserves zero target retries and the full six-conversation assertion.
+
 ### Changed
 
 - Default CLI provider is now `mock`; real endpoints require explicit `--provider openai`.
