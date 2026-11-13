@@ -1,94 +1,95 @@
-# Verification evidence
+# v0.2.0 verification evidence
 
-All data and labels below are synthetic. No paid LLM was called. No human-labelled judge
-study was performed. The human annotation template is deliberately incomplete until a
-human fills it; synthetic reference labels never claim human provenance.
+All bundled conversations, targets and reference labels are synthetic. No paid model was
+called, no genuine human calibration study was performed and no GitHub action was run.
+The annotation CLI's subprocess tests use a labeler explicitly named synthetic stdin;
+writing `label_source: human` exercises the operator interface, not a human-study claim.
 
 ## Acceptance traceability
 
-| ID | Delivered evidence | Observable result |
+| ROADMAP item | Test/artifact | Observed assertion |
 |---|---|---|
-| EC-1 | `tests/test_scenarios.py::test_seeded_suite_covers_all_six_personas`; [saved suite](docs/demo/suite.json) | All six families, stable seeded IDs and multi-turn plans |
-| EC-2 | `tests/test_providers.py::test_http_chat_uses_real_wire_contract`; `tests/test_cli_integration.py::test_run_cli_with_real_local_http_target`; `tests/test_runner.py::test_runner_bounds_concurrency_and_preserves_full_history` | Actual local HTTP requests, full message histories and bounded async overlap |
-| EC-3 | `tests/test_runner.py::test_judge_rejects_fabricated_evidence`; `tests/test_cli_integration.py::test_judge_rejects_duplicate_rubric_keys`; [candidate transcript evidence](docs/demo/broken/report.html) | Schema/evidence failures reject judgments; broken target produces actual violating replies/tool attempts |
-| EC-4 | `tests/test_statistics.py::test_cohens_kappa_matches_hand_computed_table`; `tests/test_calibration.py::test_calibration_scores_labels_and_keeps_provenance`; [synthetic reference report](docs/demo/calibration.md) | Hand-calculated kappa matches; missing/null labels reject; every output preserves label source |
-| EC-5 | `tests/test_comparison.py`; [captured diff](docs/demo/diff.json) | Reproducible paired intervals; incomplete runs, changed suites and changed judges reject |
-| EC-6 | [captured output](docs/demo/output.txt), [HTML report](docs/demo/index.html), [PR summary](docs/demo/summary.md), [raw baseline JSON](docs/demo/good/run.json) | Offline demo: baseline 24/24, candidate 4/24, no execution errors |
-| EC-7 | `tests/test_cli.py::test_demo_end_to_end_and_ci_gate`; [GitHub Action example](examples/github-action.yml) | Broken-candidate gate exits 1; identical-run gate exits 0 |
+| 01 Provider resilience/accounting | `tests/test_provider_accounting.py`; `tests/test_cli_integration.py` | HTTP-boundary fakes prove transient retry, no authentication/read-timeout replay, exhaustion, token/explicit-cost accounting and unknown cost. Real local socket tests exercise CLI HTTP requests. |
+| 02 Branch plans | `tests/test_branching.py`; `tests/test_cli_integration.py::test_generate_cli_with_real_local_model_endpoint` | Refusal match skips a prompt; unmatched route continues; invalid destinations reject; adaptive diff warns that realized prompts can differ; generated schema accepts branches. |
+| 03 Blind annotation | `tests/test_labelling.py` | Actual subprocess stdin writes a validated LabelSet, retries invalid answers, hides a sentinel judge reason, refuses overwrite and leaves no file after EOF. |
+| 04 Kappa intervals | `tests/test_kappa_intervals.py`; [captured 10,000-resample summary](docs/calibration-v02.md); [JSON](docs/calibration-v02.json) | Seeded per-item/pooled intervals, transcript clustering, undefined replicate counts and small-transcript warnings. Overall κ=0.875, interval [0.500, 1.000], 9,998 defined replicates. |
+| 05 JUnit | `tests/test_junit.py`; [baseline XML](docs/demo/good/junit.xml); [candidate XML](docs/demo/broken/junit.xml) | Parsed XML distinguishes rubric failures from execution errors, strips invalid controls and preserves escaped reasons/evidence. |
+| 06 Flakiness | `tests/test_flakiness.py`; [five-repeat summary](docs/flakiness-v02.md); [JSON](docs/flakiness-v02.json) | Stable target: 0/6 varied, all sample variances zero. Alternating test target: 2/3 passing, sample variance 1/3. Real CLI gate exits 1 for flips, 2 for execution errors, 0 for stable evidence. |
+| 07 Distribution | `tests/test_packaging.py`; clean-clone and wheel commands below | Version, MIT metadata, entry point and bundled data verified; wheel/sdist built; standalone installed wheel demo worked outside checkout. |
 
-## Quality gates observed
+Tests use real local callables, subprocesses, filesystem artifacts and local HTTP socket
+servers. Only the paid HTTP boundary is simulated for transport edge cases; internal
+scoring/routing/statistics are not mocked.
 
-```bash
-uv run ruff check .
-uv run ruff format --check .
-uv run pytest --cov=agentprobe --cov-report=term-missing --cov-fail-under=90
-uv build
-```
+## Fresh local clone
 
-Observed: Ruff checks passed; all files formatted; **87 tests passed**, **96.39% combined
-statement/branch coverage**. Wheel and source distribution built successfully. Coverage
-includes CLI subprocesses through coverage.py's subprocess patch; this is not an exclusion
-of CLI code. Core runner, rubric judge, comparison and estimators each reached full
-reported coverage in this run.
-
-## Fresh-clone and wheel checks
-
-A new local `git clone --no-hardlinks` was created in an empty temporary directory, without
-copying the development virtualenv. Its automatically created local origin was removed.
-From that clone:
+Verified code checkout: `d753aa1`. Later changes only close the roadmap and record evidence.
+Cloned from the local repository, not GitHub:
 
 ```bash
+git clone --no-hardlinks /Users/gouthammadineni/Documents/personal/agentprobe \
+  /tmp/agentprobe-v02-FlagshipAgentprobe
+# In that fresh clone, with no copied virtualenv:
 uv sync --frozen
-uv run ruff check .
-uv run ruff format --check .
-uv run pytest -q --cov=agentprobe --cov-report=term-missing --cov-fail-under=90
-uv run agentprobe demo --out .agentprobe/clean-demo --seed 42 --per-persona 4 --samples 10000
+make lint
+uv run pytest --cov=agentprobe --cov-report=term-missing --cov-fail-under=90 -q --tb=short
+uv run agentprobe demo --out .agentprobe/fresh-demo --seed 42 --per-persona 4 --samples 10000
+uv run agentprobe repeat src/agentprobe/data/harbor.yaml \
+  --callable agentprobe.demo_agents:good_agent --per-persona 1 --repeats 5 \
+  --fail-on-flaky --out .agentprobe/fresh-repeat
 uv build
 ```
 
-Observed again: **87 passed**, **96.39% coverage**. The fresh demo reproduced every pass
-count, calibration number and bootstrap endpoint from the captured README run. IDs,
-timestamps and durations are intentionally not fixed.
+Observed with Python 3.12.15:
 
-The built wheel then replaced the editable package in that clone, reusing the already
-installed frozen dependencies:
+- Frozen installation succeeded; Ruff lint passed and 61 files passed format check.
+- **130 tests passed in 13.39s; 96.21% combined statement/branch coverage**, above the 90% coverage gate.
+- Offline demo: baseline **24/24**, candidate **4/24**, zero execution errors.
+- Delta **−83.3 percentage points**, 95% paired interval **[−95.8, −66.7]**.
+- Synthetic reference agreement **95.0%, κ=0.875**, eight transcripts.
+- Five repeats of the six-scenario synthetic good target: **0/6 varied**, zero errors,
+  all binary sample variances **0.0000**.
+- Built `agentprobe-0.2.0.tar.gz` and `agentprobe-0.2.0-py3-none-any.whl` successfully.
+
+The development checkout also passed the full unchanged 90% coverage gate before the
+final boundary tests were added. One intermediate local socket target test returned a
+ProviderError on one conversation; a direct 18-request probe and the subsequent complete
+fresh-clone suite passed. No speculative retry was added to target requests to hide it.
+
+## Installed wheel, outside source tree
+
+Commands ran from `/tmp`, not either source checkout:
 
 ```bash
-uv pip install --no-deps --python .venv/bin/python ./dist/agentprobe-0.1.0-py3-none-any.whl
-uv run --no-sync --offline agentprobe demo --out .agentprobe/wheel-demo --seed 42 --samples 10000
-uv run --no-sync agentprobe diff .agentprobe/clean-demo/good .agentprobe/clean-demo/good --samples 10000 --fail-on-regression
-uv run --no-sync agentprobe diff .agentprobe/clean-demo/good .agentprobe/clean-demo/broken --samples 10000 --fail-on-regression
+uv venv /tmp/agentprobe-v02-wheel-env
+uv pip install --python /tmp/agentprobe-v02-wheel-env/bin/python \
+  /tmp/agentprobe-v02-FlagshipAgentprobe/dist/agentprobe-0.2.0-py3-none-any.whl
+/tmp/agentprobe-v02-wheel-env/bin/python -c \
+  'import agentprobe; from importlib.metadata import version; print(version("agentprobe")); print(agentprobe.__file__)'
+/tmp/agentprobe-v02-wheel-env/bin/agentprobe demo \
+  --out /tmp/agentprobe-v02-wheel-demo --seed 42 --per-persona 4 --samples 10000
+/tmp/agentprobe-v02-wheel-env/bin/agentprobe diff \
+  /tmp/agentprobe-v02-wheel-demo/good /tmp/agentprobe-v02-wheel-demo/good \
+  --samples 10000 --fail-on-regression
 ```
 
-Observed: packaged YAML/reference data loaded; wheel demo reproduced the results;
-identical-run gate exited **0**; broken-candidate gate exited **1**.
-An earlier attempt to resolve a brand-new isolated wheel environment with `uv --offline`
-failed because the registry cache lacked a required dependency artifact. No source change
-or weakened check was used: wheel installation reused the frozen environment with
-`--no-deps`. Offline demo execution is verified; offline first-time dependency installation
-is not promised.
+Observed: the new environment selected **Python 3.13.17**, installed the wheel and its
+runtime dependencies, printed version **0.2.0** and a `site-packages/agentprobe/__init__.py`
+path (not an editable checkout). The installed CLI loaded bundled contract/reference data
+and reproduced **24/24 → 4/24**, **−83.3 pp**, **[−95.8, −66.7]**, **95.0%, κ=0.875**.
+The identical-run regression gate exited **0**. The full test suite was run on 3.12, not
+3.13; only this installed CLI/demo was exercised on 3.13.
 
-## Report inspection
+## Measured scope and limitations
 
-Opened the captured comparison in a real browser, followed the candidate-evidence link,
-and expanded a trial. Observed the criterion table, persona coverage, Spanish response,
-verbatim failure evidence, and working disclosure sections. The browser tab was closed.
-All static reports escape model/user content; automated tests exercise HTML and markdown
-injection payloads. No external fonts, scripts or analytics are loaded by these reports.
-
-## Measured scope, not inferred quality
-
-- Overall paired delta: **−83.3 pp**, percentile interval **[−95.8, −66.7] pp** using the
-  exact seeded command in [captured output](docs/demo/output.txt).
-- Agreement **against synthetic reference labels**: **95.0%, κ=0.875**, across the bundled
-  reference transcripts. Every criterion is small-sample flagged; this does not establish
-  real-model or human judge reliability.
-- Synthetic scheduling benchmark: **6.69×** median speedup at concurrency eight. The exact
-  command and all raw timing observations are in [benchmark.json](docs/benchmark.json).
-- Real HTTP compatibility is tested with local socket servers. Paid-model quality,
-  hard cancellation of synchronous threads, real tool execution, multiplicity correction,
-  and cluster-aware population inference are not claimed.
-
-No remote was created for this project, no code was pushed, and no package was published.
-All HTTP test servers shut down through their fixture cleanup. No application server is
-needed for the demo or report.
+- [Captured demo output](docs/demo/output.txt), [HTML](docs/demo/index.html),
+  [raw candidate evidence](docs/demo/broken/run.json) and [paired diff](docs/demo/diff.json)
+  were refreshed from a real v0.2 command. IDs/timings vary; scores/statistics are seeded.
+- Kappa interval endpoints are conditional on defined replicates. The small synthetic
+  sample and perfect empirical matches are not evidence of population reliability.
+- Timing/accounting tests do not validate a vendor invoice or claim real-model throughput.
+- No actual human annotation, paid-model run, tool execution, GitHub PR comment, package
+  publication, remote push, release or tag was performed. Fake-tool execution and a
+  composite comment action remain explicitly deferred, with no stub modules.
+- The older synthetic scheduling benchmark in README/docs/benchmark.json is retained as
+  a separately labelled prior measurement, not rerun or claimed as a new v0.2 speedup.

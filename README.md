@@ -315,7 +315,7 @@ uv run ruff format --check .
 uv run pytest --cov=agentprobe --cov-report=term-missing --cov-fail-under=90
 ```
 
-Observed: **87 tests passed; 96.39% combined statement/branch coverage**. The same install,
+Observed in the fresh clone: **130 tests passed; 96.21% combined statement/branch coverage**. The install,
 tests and seeded demo passed in a fresh local clone. The built wheel also ran the demo
 offline. [Verification evidence](evidence.md) records the commands, scope and limitations.
 
