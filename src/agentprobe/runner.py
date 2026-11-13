@@ -46,6 +46,6 @@ async def run_suite(spec: AgentSpec, suite: Suite, agent: Agent, judge: Judge, *
 
     conversations = await asyncio.gather(*(execute(scenario) for scenario in suite.scenarios))
     return Run(id=uuid.uuid4().hex[:12], agent=agent.name, judge=judge.name,
-               created_at=datetime.now(UTC).isoformat(), spec=spec, suite=suite,
+               created_at=datetime.now(UTC).isoformat(), spec=spec.model_copy(deep=True), suite=suite.model_copy(deep=True),
                conversations=conversations, duration_seconds=time.perf_counter() - started,
                concurrency=concurrency)
