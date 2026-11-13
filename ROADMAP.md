@@ -46,11 +46,11 @@ Local-only milestone. No paid model evaluation or remote publication is implied.
 
 ### 06. Repeated-run flakiness analysis
 
-- Status: planned
+- Status: complete
 - Problem: One pass or failure does not distinguish stable behavior from stochastic instability.
 - Acceptance: agentprobe repeat executes an identical suite 2..100 times, saves each run and per-scenario pass fraction, sample variance, criterion variability and errors; errors cannot become passes.
 - Test plan: Deterministic and alternating agents, incomplete/mismatched evidence, repeat bounds and CLI end-to-end tests.
-- Delivery commits: pending
+- Delivery commits: `cd94be3..df52520`
 
 ### 07. Build and verify distributable v0.2.0
 

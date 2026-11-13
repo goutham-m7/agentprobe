@@ -77,4 +77,4 @@ def test_bad_input_reports_clean_error(tmp_path):
 
 def test_cli_help_and_version():
     assert "CI for AI agents" in cli("--help").stdout
-    assert "0.1.0" in cli("--version").stdout
+    assert "0.2.0" in cli("--version").stdout
