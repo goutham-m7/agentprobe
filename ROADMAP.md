@@ -30,11 +30,11 @@ Local-only milestone. No paid model evaluation or remote publication is implied.
 
 ### 04. Transcript-bootstrap calibration intervals
 
-- Status: planned
+- Status: complete
 - Problem: Point kappa hides uncertainty, especially for small or single-class samples.
 - Acceptance: Report seeded 95% percentile kappa intervals per criterion and overall; pool by transcript, count undefined replicates, and never fabricate undefined estimates.
 - Test plan: Known agreement cases, reproducibility, degenerate labels, sample limits and CLI JSON/markdown tests.
-- Delivery commits: pending
+- Delivery commits: `b3046a4..e732dfa`
 
 ### 05. JUnit CI evidence
 

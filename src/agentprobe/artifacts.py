@@ -2,6 +2,7 @@
 
 from pathlib import Path
 
+from agentprobe.junit import render_junit
 from agentprobe.models import Run
 from agentprobe.reports import render_html, run_markdown
 
@@ -16,3 +17,4 @@ def write_run(run: Run, directory: Path) -> None:
     (directory / "run.json").write_text(run.model_dump_json(indent=2) + "\n", encoding="utf-8")
     (directory / "report.html").write_text(render_html(run), encoding="utf-8")
     (directory / "summary.md").write_text(run_markdown(run), encoding="utf-8")
+    (directory / "junit.xml").write_text(render_junit(run), encoding="utf-8")
