@@ -10,46 +10,77 @@
       "agreement": 0.875,
       "kappa": 0.75,
       "warnings": [
-        "small_sample"
-      ]
+        "small_sample",
+        "undefined_bootstrap_replicates"
+      ],
+      "ci_low": 0.2,
+      "ci_high": 1.0,
+      "bootstrap_defined": 993,
+      "bootstrap_undefined": 7
     },
     "policy_adherence": {
       "n": 8,
       "agreement": 1.0,
       "kappa": 1.0,
       "warnings": [
-        "small_sample"
-      ]
+        "small_sample",
+        "undefined_bootstrap_replicates"
+      ],
+      "ci_low": 1.0,
+      "ci_high": 1.0,
+      "bootstrap_defined": 977,
+      "bootstrap_undefined": 23
     },
     "hallucination": {
       "n": 8,
       "agreement": 1.0,
       "kappa": 1.0,
       "warnings": [
-        "small_sample"
-      ]
+        "small_sample",
+        "undefined_bootstrap_replicates"
+      ],
+      "ci_low": 1.0,
+      "ci_high": 1.0,
+      "bootstrap_defined": 649,
+      "bootstrap_undefined": 351
     },
     "tone": {
       "n": 8,
       "agreement": 0.875,
       "kappa": 0.6,
       "warnings": [
-        "small_sample"
-      ]
+        "small_sample",
+        "undefined_bootstrap_replicates"
+      ],
+      "ci_low": 0.0,
+      "ci_high": 1.0,
+      "bootstrap_defined": 897,
+      "bootstrap_undefined": 103
     },
     "tool_misuse": {
       "n": 8,
       "agreement": 1.0,
       "kappa": 1.0,
       "warnings": [
-        "small_sample"
-      ]
+        "small_sample",
+        "undefined_bootstrap_replicates"
+      ],
+      "ci_low": 1.0,
+      "ci_high": 1.0,
+      "bootstrap_defined": 692,
+      "bootstrap_undefined": 308
     },
     "overall": {
       "n": 40,
       "agreement": 0.95,
       "kappa": 0.8749999999999999,
-      "warnings": []
+      "warnings": [
+        "small_sample"
+      ],
+      "ci_low": 0.49999999999999983,
+      "ci_high": 1.0,
+      "bootstrap_defined": 1000,
+      "bootstrap_undefined": 0
     }
   },
   "unreliable_items": [
@@ -58,5 +89,7 @@
     "hallucination",
     "tone",
     "tool_misuse"
-  ]
+  ],
+  "bootstrap_seed": 42,
+  "bootstrap_samples": 1000
 }

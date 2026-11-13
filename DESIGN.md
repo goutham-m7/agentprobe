@@ -6,6 +6,9 @@ truthfulness, tone, and tool discipline. agentprobe runs the same adversarial co
 suite against two versions, keeps the evidence, and measures paired regressions.
 All bundled material is synthetic and original. No production data is required.
 
+v0.2 additions and tradeoffs are specified in [docs/v0.2-design.md](docs/v0.2-design.md);
+[ROADMAP.md](ROADMAP.md) links their concrete acceptance criteria and delivery commits.
+
 ## Decisions
 Python 3.12, asyncio, Pydantic, httpx and YAML: native Python callables make research agents
 cheap to integrate; a single async HTTP adapter covers OpenAI-compatible endpoints.
@@ -40,8 +43,9 @@ A callable receives the full message list and returns a string or structured ass
 reply, synchronously or asynchronously. Synchronous calls run in a thread. Tools are
 observed as attempted calls; the harness does not execute them or fabricate results.
 A suite contains seeded, stable IDs, the spec fingerprint, persona, objective, and planned
-user turns. Plans are fixed before execution so A/B uses identical stimuli; adaptive user
-simulation is deliberately excluded. The real provider generates spec-grounded plans.
+user turns and optional forward-only reply branches. Fixed plans give identical stimuli;
+branched plans give an identical routing policy, not necessarily identical realized prompts.
+LLM-driven adaptive user simulation remains excluded. The real provider accepts both schemas.
 The mock uses synthetic support scenarios for its demo domain only.
 The judge receives untrusted transcripts as JSON data, a spec-derived rubric, and explicit
 instructions not to obey transcript instructions. Outputs must contain every criterion
@@ -52,8 +56,11 @@ Validate YAML, generated suites, judge schemas and loaded artifacts. Reject unkn
 empty scenarios, duplicate IDs, wrong fingerprints, non-finite metrics, and mismatched suites.
 Timeout individual conversations; preserve failures separately from rubric failures.
 Do not score exceptions as passes or compare incomplete runs. Cancellation is propagated.
-No retries: fail visibly, avoid hidden duplicate billing. Bounded concurrency limits in-flight
-conversations and therefore judge requests. HTTP clients have deadlines and ignore proxy env.
+Target requests are never transparently replayed. Judge/generator requests use bounded,
+visible retries for transient statuses/connect failures, not read timeouts. Usage accounting
+includes attempts, aggregate latency, token counts and optional caller-priced estimates.
+Bounded concurrency limits in-flight conversations and therefore judge requests.
+HTTP clients have deadlines and ignore proxy env.
 Keep credentials in environment variables at CLI composition only. Never persist headers.
 Redact HTTP status errors to avoid reflecting tokens or private URLs. Reports HTML-escape
 all model/user content; artifacts can still contain sensitive conversation data.
@@ -61,10 +68,14 @@ Python imports execute code: load trusted adapters only. Agent endpoints may hav
 side effects: use a sandbox. Do not point at production agents with mutation credentials.
 
 ## Calibration and statistics
-Human labels cover each criterion on the same transcript. Compute percentage agreement
-and Cohen's kappa per criterion and overall; kappa is undefined when expected agreement
-is one. Flag n < 20, kappa < 0.6, agreement < 80%, or undefined kappa. Calibration reports
-judge identity and dataset size. No claim of reliability from synthetic labels.
+Human labels cover each criterion on the same transcript; the blind annotation CLI hides
+judge predictions. Compute agreement and kappa per criterion and overall; kappa is undefined
+when expected agreement is one. Seeded bootstrap draws whole transcripts, keeping their
+rubric decisions together. Exclude/count undefined replicates; never invent an interval
+for undefined original kappa. Flag fewer than 20 transcripts, kappa < 0.6, agreement < 80%,
+undefined kappa/replicates. Reports retain judge identity, label provenance, size and seed.
+Synthetic labels do not establish human/model reliability. JUnit exports failures separately
+from errors. Repeated-run reports preserve every run and suppress incomplete scenario rates.
 Diff requires the exact suite and spec; resample matched conversation deltas with a seeded
 PRNG. Report point delta, percentile interval, sample size, seed, and significant regressions.
 No p-value is inferred from a percentile interval. Tiny samples are visibly warned.
