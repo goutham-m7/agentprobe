@@ -1,0 +1,51 @@
+# Copy into .github/workflows/agentprobe.yml in a repository containing your
+# installed Python target adapters. This example uses the bundled callable agents;
+# replace both --callable paths with your baseline/candidate adapters.
+name: Agent regression gate
+on:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.13.5"
+      - run: uv sync --frozen
+      - name: Generate once, reuse exact stimuli
+        run: >-
+          uv run agentprobe generate src/agentprobe/data/harbor.yaml
+          --provider mock --seed 42 --out .agentprobe/suite.json
+      - name: Baseline
+        run: >-
+          uv run agentprobe run src/agentprobe/data/harbor.yaml --provider mock
+          --suite .agentprobe/suite.json --callable agentprobe.demo_agents:good_agent
+          --out .agentprobe/baseline
+      - name: Candidate
+        run: >-
+          uv run agentprobe run src/agentprobe/data/harbor.yaml --provider mock
+          --suite .agentprobe/suite.json --callable agentprobe.demo_agents:broken_agent
+          --out .agentprobe/candidate
+      - name: Fail on significant regressions
+        run: >-
+          uv run agentprobe diff .agentprobe/baseline .agentprobe/candidate
+          --seed 42 --samples 10000 --out .agentprobe/diff --fail-on-regression
+      - name: Add PR-ready markdown to job summary
+        if: always()
+        run: |
+          if [ -f .agentprobe/diff/summary.md ]; then
+            cat .agentprobe/diff/summary.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: agent-evaluation
+          path: .agentprobe
+# The deliberately broken candidate makes this example fail with exit code 1.
+# For real providers use --provider openai and --model, with AGENTPROBE_API_KEY
+# from repository secrets. Never expose secrets to untrusted fork PR code.
+# This example writes a job summary, not a PR comment; summary.md can be copied
+# into a comment by your existing review automation without extra permissions.
