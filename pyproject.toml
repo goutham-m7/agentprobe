@@ -1,7 +1,7 @@
 [project]
 name = "agentprobe"
 version = "0.1.0"
-description = "Add your description here"
+description = "CI for AI agents: adversarial conversations, calibrated judges, paired regressions"
 authors = [
     { name = "Goutham Madineni", email = "151193576+goutham-m7@users.noreply.github.com" }
 ]
@@ -13,7 +13,7 @@ dependencies = [
 ]
 
 [project.scripts]
-agentprobe = "agentprobe:main"
+agentprobe = "agentprobe.cli:main"
 
 [build-system]
 requires = ["uv_build>=0.13.5,<0.14.0"]
@@ -26,3 +26,23 @@ dev = [
     "pytest-cov>=6,<8",
     "ruff>=0.14,<1",
 ]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+testpaths = ["tests"]
+addopts = "-ra"
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "I", "B", "UP"]
+
+[tool.coverage.run]
+source = ["agentprobe"]
+branch = true
+
+[tool.coverage.report]
+show_missing = true
