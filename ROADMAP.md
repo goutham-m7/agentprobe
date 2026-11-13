@@ -22,11 +22,11 @@ Local-only milestone. No paid model evaluation or remote publication is implied.
 
 ### 03. Interactive human annotation
 
-- Status: planned
+- Status: complete
 - Problem: Hand editing calibration JSON is error prone and exposes judge predictions to labelers.
 - Acceptance: agentprobe label reads run evidence, shows transcripts without predictions, accepts pass/fail for all criteria and writes a validated human LabelSet; interruption never writes partial output.
 - Test plan: CLI subprocess tests exercise input retry, complete labels, EOF and overwrite refusal.
-- Delivery commits: pending
+- Delivery commits: `f39b5f2..b3046a4`
 
 ### 04. Transcript-bootstrap calibration intervals
 

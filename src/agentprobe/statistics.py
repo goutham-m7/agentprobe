@@ -12,6 +12,10 @@ class Agreement(Model):
     agreement: float
     kappa: float | None
     warnings: list[str]
+    ci_low: float | None = None
+    ci_high: float | None = None
+    bootstrap_defined: int = 0
+    bootstrap_undefined: int = 0
 
 
 def agreement(reference: list[bool], predicted: list[bool]) -> Agreement:
@@ -61,3 +65,47 @@ def bootstrap_delta(deltas: list[float], *, seed: int, samples: int) -> Bootstra
     estimates = sorted(fmean(rng.choices(deltas, k=n)) for _ in range(samples))
     low, high = _percentile(estimates, 0.025), _percentile(estimates, 0.975)
     return Bootstrap(delta=fmean(deltas), ci_low=low, ci_high=high, regressed=high < 0)
+
+
+def bootstrap_agreement(
+    reference: list[list[bool]], predicted: list[list[bool]], *, seed: int, samples: int
+) -> Agreement:
+    """Resample transcripts, not individual rubric decisions within transcripts."""
+    if (
+        not reference
+        or len(reference) != len(predicted)
+        or not 100 <= samples <= 100000
+        or any(not row or len(row) != len(reference[0]) for row in reference + predicted)
+    ):
+        raise ValueError(
+            "Bootstrap needs equal nonempty rectangular labels and 100..100000 samples"
+        )
+    result = agreement(
+        [value for row in reference for value in row],
+        [value for row in predicted for value in row],
+    )
+    # Precompute transcript counts; preserve each transcript as the sampling unit.
+    rows = [
+        (sum(a == b for a, b in zip(left, right, strict=True)), sum(left), sum(right))
+        for left, right in zip(reference, predicted, strict=True)
+    ]
+    rng = random.Random(seed)
+    estimates = []
+    n = result.n
+    for _ in range(samples):
+        selected = rng.choices(rows, k=len(rows))
+        matches = sum(row[0] for row in selected) / n
+        ref = sum(row[1] for row in selected) / n
+        pred = sum(row[2] for row in selected) / n
+        expected = ref * pred + (1 - ref) * (1 - pred)
+        if expected != 1:
+            estimates.append((matches - expected) / (1 - expected))
+    result.bootstrap_defined = len(estimates)
+    result.bootstrap_undefined = samples - len(estimates)
+    if result.bootstrap_undefined:
+        result.warnings.append("undefined_bootstrap_replicates")
+    if result.kappa is not None and estimates:
+        estimates.sort()
+        result.ci_low = _percentile(estimates, 0.025)
+        result.ci_high = _percentile(estimates, 0.975)
+    return result

@@ -119,6 +119,8 @@ def parser() -> argparse.ArgumentParser:
     calibration.add_argument("--out", type=Path, required=True)
     calibration.add_argument("--concurrency", type=int, default=6)
     calibration.add_argument("--timeout", type=float, default=60)
+    calibration.add_argument("--samples", type=int, default=1000)
+    calibration.add_argument("--seed", type=int, default=42)
     provider_options(calibration)
     label = commands.add_parser("label", help="Blindly annotate complete run transcripts")
     label.add_argument("run", type=Path)
@@ -161,13 +163,16 @@ def calibration_text(result) -> str:
         "",
         f"{result.examples} transcripts · Judge: {result.judge}",
         "",
-        "| Criterion | Agreement | Cohen's kappa | Reliability warnings |",
-        "|---|---:|---:|---|",
+        "| Criterion | Agreement | Cohen's kappa | 95% kappa CI | Defined replicates | Reliability warnings |",
+        "|---|---:|---:|---:|---:|---|",
     ]
     for key, metric in result.metrics.items():
         kappa = "undefined" if metric.kappa is None else f"{metric.kappa:.3f}"
+        interval = (
+            "undefined" if metric.ci_low is None else f"[{metric.ci_low:.3f}, {metric.ci_high:.3f}]"
+        )
         lines.append(
-            f"| {key} | {metric.agreement:.1%} | {kappa} | {', '.join(metric.warnings) or 'none'} |"
+            f"| {key} | {metric.agreement:.1%} | {kappa} | {interval} | {metric.bootstrap_defined}/{result.bootstrap_samples} | {', '.join(metric.warnings) or 'none'} |"
         )
     if result.label_source == "synthetic_reference":
         lines += [
@@ -276,7 +281,12 @@ async def execute(args) -> int:
         if args.command == "calibrate":
             labels = LabelSet.model_validate_json(args.labels.read_text(encoding="utf-8"))
             result = await calibrate(
-                labels, Judge(provider), concurrency=args.concurrency, timeout=args.timeout
+                labels,
+                Judge(provider),
+                concurrency=args.concurrency,
+                timeout=args.timeout,
+                seed=args.seed,
+                samples=args.samples,
             )
             args.out.mkdir(parents=True, exist_ok=False)
             (args.out / "calibration.json").write_text(

@@ -7,7 +7,7 @@ from pydantic import Field, StrictBool, model_validator
 
 from agentprobe.judge import Judge
 from agentprobe.models import CRITERIA, AgentSpec, Criterion, Message, Model, Text
-from agentprobe.statistics import Agreement, agreement
+from agentprobe.statistics import Agreement, bootstrap_agreement
 
 
 class LabelledExample(Model):
@@ -47,13 +47,23 @@ class Calibration(Model):
     examples: int
     metrics: dict[str, Agreement]
     unreliable_items: list[str]
+    bootstrap_seed: int = 42
+    bootstrap_samples: int = 1000
 
 
 async def calibrate(
-    labels: LabelSet, judge: Judge, *, concurrency: int, timeout: float
+    labels: LabelSet,
+    judge: Judge,
+    *,
+    concurrency: int,
+    timeout: float,
+    seed: int = 42,
+    samples: int = 1000,
 ) -> Calibration:
     if not 1 <= concurrency <= 256 or timeout <= 0:
         raise ValueError("concurrency must be 1..256 and timeout must be positive")
+    if not 100 <= samples <= 100000:
+        raise ValueError("Bootstrap samples must be 100..100000")
     semaphore = asyncio.Semaphore(concurrency)
 
     async def score(example):
@@ -62,15 +72,19 @@ async def calibrate(
 
     predictions = await asyncio.gather(*(score(example) for example in labels.examples))
     metrics = {
-        key: agreement(
-            [example.labels[key] for example in labels.examples],
-            [prediction.scores[key].passed for prediction in predictions],
+        key: bootstrap_agreement(
+            [[example.labels[key]] for example in labels.examples],
+            [[prediction.scores[key].passed] for prediction in predictions],
+            seed=seed,
+            samples=samples,
         )
         for key in CRITERIA
     }
-    metrics["overall"] = agreement(
-        [example.labels[key] for example in labels.examples for key in CRITERIA],
-        [prediction.scores[key].passed for prediction in predictions for key in CRITERIA],
+    metrics["overall"] = bootstrap_agreement(
+        [[example.labels[key] for key in CRITERIA] for example in labels.examples],
+        [[prediction.scores[key].passed for key in CRITERIA] for prediction in predictions],
+        seed=seed,
+        samples=samples,
     )
     return Calibration(
         judge=judge.name,
@@ -79,4 +93,6 @@ async def calibrate(
         examples=len(labels.examples),
         metrics=metrics,
         unreliable_items=[key for key in CRITERIA if metrics[key].warnings],
+        bootstrap_seed=seed,
+        bootstrap_samples=samples,
     )
