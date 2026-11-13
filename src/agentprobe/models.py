@@ -63,8 +63,7 @@ class Branch(Model):
     next_turn: int = Field(ge=2, le=10, strict=True)
 
 
-class Scenario(Model):
-    id: Text
+class Plan(Model):
     persona: Persona
     objective: Text
     turns: list[Text] = Field(min_length=1, max_length=10)
@@ -83,6 +82,10 @@ class Scenario(Model):
             if branch.after_turn == after_turn and branch.contains.casefold() in reply.casefold():
                 return branch.next_turn
         return after_turn + 1
+
+
+class Scenario(Plan):
+    id: Text
 
 
 class Suite(Model):

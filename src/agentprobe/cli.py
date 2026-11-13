@@ -18,6 +18,7 @@ from agentprobe.artifacts import read_run, write_run
 from agentprobe.calibration import LabelSet, calibrate
 from agentprobe.comparison import compare
 from agentprobe.demo_agents import broken_agent, demo_spec, good_agent
+from agentprobe.flakiness import analyze_runs, flakiness_markdown
 from agentprobe.judge import Judge
 from agentprobe.labelling import label_run
 from agentprobe.mock import MockProvider
@@ -102,6 +103,14 @@ def parser() -> argparse.ArgumentParser:
     run.add_argument("--per-persona", type=int, default=4)
     run.add_argument("--seed", type=int, default=42)
     provider_options(run)
+    repeat = commands.add_parser(
+        "repeat",
+        parents=[run],
+        add_help=False,
+        help="Repeat an identical suite to detect score flips",
+    )
+    repeat.add_argument("--repeats", type=int, default=5)
+    repeat.add_argument("--fail-on-flaky", action="store_true")
     diff = commands.add_parser("diff", help="Compare matched run folders or run.json files")
     diff.add_argument("baseline", type=Path)
     diff.add_argument("candidate", type=Path)
@@ -255,6 +264,8 @@ async def demo(args) -> int:
 async def execute(args) -> int:
     if args.out is not None and args.out.exists():
         raise FileExistsError(f"Refusing to overwrite {args.out}; choose a new --out")
+    if args.command == "repeat" and not 2 <= args.repeats <= 100:
+        raise ValueError("repeats must be 2..100")
     if args.command == "label":
         labels = label_run(read_run(args.run), args.labeler)
         new_file(args.out, labels.model_dump_json(indent=2) + "\n")
@@ -335,6 +346,30 @@ async def execute(args) -> int:
             if args.suite
             else await generate_suite(spec, provider, per_persona=args.per_persona, seed=args.seed)
         )
+        if args.command == "repeat":
+            directory = args.out or default_directory("repeat")
+            directory.mkdir(parents=True, exist_ok=False)
+            runs = []
+            for index in range(args.repeats):
+                result = await run_suite(
+                    spec,
+                    suite,
+                    agent,
+                    Judge(provider),
+                    concurrency=args.concurrency,
+                    timeout=args.timeout,
+                )
+                write_run(result, directory / f"run-{index + 1:03}")
+                runs.append(result)
+            report = analyze_runs(runs)
+            new_file(directory / "flakiness.json", json.dumps(report, indent=2) + "\n")
+            text = flakiness_markdown(report)
+            new_file(directory / "summary.md", text)
+            write_usage(directory / "usage.json", provider, agent)
+            print(text, end="")
+            return (
+                2 if report["errors"] else int(args.fail_on_flaky and report["flaky_scenarios"] > 0)
+            )
         result = await run_suite(
             spec, suite, agent, Judge(provider), concurrency=args.concurrency, timeout=args.timeout
         )

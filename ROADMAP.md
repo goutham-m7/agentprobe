@@ -38,11 +38,11 @@ Local-only milestone. No paid model evaluation or remote publication is implied.
 
 ### 05. JUnit CI evidence
 
-- Status: planned
+- Status: complete
 - Problem: CI systems cannot ingest the HTML or markdown evidence as native test results.
 - Acceptance: Every run writes JUnit XML with one case per scenario, rubric failures separate from execution errors, safe XML text and useful reasons.
 - Test plan: Parse actual run artifacts and assert counts, duration, failure/error details and XML escaping.
-- Delivery commits: pending
+- Delivery commits: `e732dfa..cd94be3`
 
 ### 06. Repeated-run flakiness analysis
 
