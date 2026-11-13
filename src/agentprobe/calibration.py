@@ -49,7 +49,9 @@ class Calibration(Model):
     unreliable_items: list[str]
 
 
-async def calibrate(labels: LabelSet, judge: Judge, *, concurrency: int, timeout: float) -> Calibration:
+async def calibrate(
+    labels: LabelSet, judge: Judge, *, concurrency: int, timeout: float
+) -> Calibration:
     if not 1 <= concurrency <= 256 or timeout <= 0:
         raise ValueError("concurrency must be 1..256 and timeout must be positive")
     semaphore = asyncio.Semaphore(concurrency)
@@ -59,10 +61,22 @@ async def calibrate(labels: LabelSet, judge: Judge, *, concurrency: int, timeout
             return await judge.score(labels.spec, example.messages, example.objective)
 
     predictions = await asyncio.gather(*(score(example) for example in labels.examples))
-    metrics = {key: agreement([example.labels[key] for example in labels.examples],
-                              [prediction.scores[key].passed for prediction in predictions]) for key in CRITERIA}
-    metrics["overall"] = agreement([example.labels[key] for example in labels.examples for key in CRITERIA],
-                                    [prediction.scores[key].passed for prediction in predictions for key in CRITERIA])
-    return Calibration(judge=judge.name, label_source=labels.label_source, labeler=labels.labeler,
-                       examples=len(labels.examples), metrics=metrics,
-                       unreliable_items=[key for key in CRITERIA if metrics[key].warnings])
+    metrics = {
+        key: agreement(
+            [example.labels[key] for example in labels.examples],
+            [prediction.scores[key].passed for prediction in predictions],
+        )
+        for key in CRITERIA
+    }
+    metrics["overall"] = agreement(
+        [example.labels[key] for example in labels.examples for key in CRITERIA],
+        [prediction.scores[key].passed for prediction in predictions for key in CRITERIA],
+    )
+    return Calibration(
+        judge=judge.name,
+        label_source=labels.label_source,
+        labeler=labels.labeler,
+        examples=len(labels.examples),
+        metrics=metrics,
+        unreliable_items=[key for key in CRITERIA if metrics[key].warnings],
+    )

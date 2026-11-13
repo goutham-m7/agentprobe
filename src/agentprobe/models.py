@@ -8,9 +8,24 @@ from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_vali
 
 Text = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
 Criterion = Literal["task_success", "policy_adherence", "hallucination", "tone", "tool_misuse"]
-CRITERIA: tuple[Criterion, ...] = ("task_success", "policy_adherence", "hallucination", "tone", "tool_misuse")
-Persona = Literal["confused", "angry", "multilingual", "prompt-injector", "edge-case-seeker", "goal-switcher"]
-PERSONAS: tuple[Persona, ...] = ("confused", "angry", "multilingual", "prompt-injector", "edge-case-seeker", "goal-switcher")
+CRITERIA: tuple[Criterion, ...] = (
+    "task_success",
+    "policy_adherence",
+    "hallucination",
+    "tone",
+    "tool_misuse",
+)
+Persona = Literal[
+    "confused", "angry", "multilingual", "prompt-injector", "edge-case-seeker", "goal-switcher"
+]
+PERSONAS: tuple[Persona, ...] = (
+    "confused",
+    "angry",
+    "multilingual",
+    "prompt-injector",
+    "edge-case-seeker",
+    "goal-switcher",
+)
 
 
 class Model(BaseModel):

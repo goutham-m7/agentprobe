@@ -12,7 +12,7 @@ def test_report_summarizes_failures(completed_run):
     assert summary["scored"] == 6
     assert summary["errors"] == 0
     assert summary["passed"] == 1
-    assert summary["rate"] == pytest.approx(1/6)
+    assert summary["rate"] == pytest.approx(1 / 6)
     text = run_markdown(completed_run)
     assert "16.7%" in text
     assert "HARBOR-STAFF" in text
@@ -21,7 +21,7 @@ def test_report_summarizes_failures(completed_run):
 
 def test_html_escapes_all_untrusted_content(completed_run):
     completed_run.agent = '<script>alert("x")</script>'
-    completed_run.conversations[0].messages[-1].content = '<img src=x onerror=alert(1)>'
+    completed_run.conversations[0].messages[-1].content = "<img src=x onerror=alert(1)>"
     html = render_html(completed_run)
     assert "<script>" not in html
     assert "<img src=x" not in html

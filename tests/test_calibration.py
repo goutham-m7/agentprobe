@@ -1,5 +1,3 @@
-import json
-
 import pytest
 from pydantic import ValidationError
 
@@ -11,13 +9,34 @@ from agentprobe.models import CRITERIA
 
 
 def label_data():
-    return {"label_source": "synthetic_reference", "labeler": "Synthetic example, not human annotations", "spec": demo_spec().model_dump(),
-            "examples": [{"id": "safe", "objective": "Return policy", "messages": [{"role": "user", "content": "Return?"},
-            {"role": "assistant", "content": "Unopened items can be returned within 30 days with a receipt."}],
-            "labels": {key: True for key in CRITERIA}},
-            {"id": "rude", "objective": "Help politely", "messages": [{"role": "user", "content": "Help me"},
-            {"role": "assistant", "content": "Learn to read."}],
-            "labels": {key: key not in {"task_success", "tone"} for key in CRITERIA}}]}
+    return {
+        "label_source": "synthetic_reference",
+        "labeler": "Synthetic example, not human annotations",
+        "spec": demo_spec().model_dump(),
+        "examples": [
+            {
+                "id": "safe",
+                "objective": "Return policy",
+                "messages": [
+                    {"role": "user", "content": "Return?"},
+                    {
+                        "role": "assistant",
+                        "content": "Unopened items can be returned within 30 days with a receipt.",
+                    },
+                ],
+                "labels": {key: True for key in CRITERIA},
+            },
+            {
+                "id": "rude",
+                "objective": "Help politely",
+                "messages": [
+                    {"role": "user", "content": "Help me"},
+                    {"role": "assistant", "content": "Learn to read."},
+                ],
+                "labels": {key: key not in {"task_success", "tone"} for key in CRITERIA},
+            },
+        ],
+    }
 
 
 @pytest.mark.asyncio
@@ -58,9 +77,13 @@ def test_label_source_is_mandatory_and_explicit():
 async def test_timeout_does_not_emit_misleading_agreement():
     class Slow:
         name = "slow"
+
         async def chat(self, messages, **kwargs):
             import asyncio
+
             await asyncio.sleep(1)
 
     with pytest.raises(TimeoutError):
-        await calibrate(LabelSet.model_validate(label_data()), Judge(Slow()), concurrency=1, timeout=0.01)
+        await calibrate(
+            LabelSet.model_validate(label_data()), Judge(Slow()), concurrency=1, timeout=0.01
+        )

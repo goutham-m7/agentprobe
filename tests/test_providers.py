@@ -17,7 +17,13 @@ def endpoint(response, status=200):
 
     class Handler(BaseHTTPRequestHandler):
         def do_POST(self):
-            received.append((self.path, self.headers.get("Authorization"), json.loads(self.rfile.read(int(self.headers["Content-Length"])))))
+            received.append(
+                (
+                    self.path,
+                    self.headers.get("Authorization"),
+                    json.loads(self.rfile.read(int(self.headers["Content-Length"]))),
+                )
+            )
             body = json.dumps(response).encode()
             self.send_response(status)
             self.send_header("Content-Type", "application/json")
@@ -59,19 +65,32 @@ async def test_http_chat_uses_real_wire_contract():
 
 @pytest.mark.asyncio
 async def test_http_agent_records_attempted_tools():
-    call = {"id": "c1", "type": "function", "function": {"name": "lookup", "arguments": '{"id": "A"}'}}
+    call = {
+        "id": "c1",
+        "type": "function",
+        "function": {"name": "lookup", "arguments": '{"id": "A"}'},
+    }
     with endpoint(completion({"content": None, "tool_calls": [call]})) as (url, received):
         async with httpx.AsyncClient(trust_env=False) as client:
             agent = HttpAgent(OpenAIProvider(client, url + "/chat/completions", "", "local"))
-            reply = await agent.respond([Message(role="user", content="Find A")], [Tool(name="lookup", description="Find item")])
+            reply = await agent.respond(
+                [Message(role="user", content="Find A")],
+                [Tool(name="lookup", description="Find item")],
+            )
     assert reply.tool_calls[0].arguments == {"id": "A"}
     assert received[0][1] is None
     assert received[0][2]["tools"][0]["function"]["name"] == "lookup"
 
 
-@pytest.mark.parametrize("response,status", [({"choices": []}, 200), ({"error": "secret-test"}, 401),
-                                             (completion({"content": ""}), 200),
-                                             ({"choices": [{"finish_reason": "length", "message": {"content": "cut"}}]}, 200)])
+@pytest.mark.parametrize(
+    "response,status",
+    [
+        ({"choices": []}, 200),
+        ({"error": "secret-test"}, 401),
+        (completion({"content": ""}), 200),
+        ({"choices": [{"finish_reason": "length", "message": {"content": "cut"}}]}, 200),
+    ],
+)
 @pytest.mark.asyncio
 async def test_http_failures_do_not_leak_response_or_key(response, status):
     with endpoint(response, status) as (url, _):
@@ -81,7 +100,10 @@ async def test_http_failures_do_not_leak_response_or_key(response, status):
     assert "secret-test" not in str(exc.value)
 
 
-@pytest.mark.parametrize("url", ["file:///tmp/secret", "ftp://host", "https://user:pass@host/v1", "https://host/v1?key=secret"])
+@pytest.mark.parametrize(
+    "url",
+    ["file:///tmp/secret", "ftp://host", "https://user:pass@host/v1", "https://host/v1?key=secret"],
+)
 def test_provider_rejects_unsafe_base_urls(url):
     with pytest.raises(ValueError):
         OpenAIProvider(None, url, "", "m")
@@ -96,7 +118,9 @@ async def test_sync_and_async_callable_adapters():
         return Reply(content="async " + messages[-1].content)
 
     for function, expected in [(sync, "answer to hi"), (asynchronous, "async hi")]:
-        reply = await CallableAgent(function, "test").respond([Message(role="user", content="hi")], [])
+        reply = await CallableAgent(function, "test").respond(
+            [Message(role="user", content="hi")], []
+        )
         assert reply.content == expected
 
 

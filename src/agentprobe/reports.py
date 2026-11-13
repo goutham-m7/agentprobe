@@ -7,15 +7,35 @@ from agentprobe.models import CRITERIA, PERSONAS, Run
 
 
 def md(value) -> str:
-    return escape(str(value), quote=False).replace("|", "&#124;").replace("`", "&#96;").replace("\n", " ").replace("\r", " ")
+    return (
+        escape(str(value), quote=False)
+        .replace("|", "&#124;")
+        .replace("`", "&#96;")
+        .replace("\n", " ")
+        .replace("\r", " ")
+    )
 
 
 def summarize(run: Run) -> dict:
     scored = [conversation for conversation in run.conversations if conversation.grades is not None]
-    passed = sum(all(grade.passed for grade in conversation.grades.scores.values()) for conversation in scored)
-    return {"total": len(run.conversations), "scored": len(scored), "errors": len(run.conversations) - len(scored),
-            "passed": passed, "rate": passed / len(scored) if scored else None,
-            "criteria": {key: sum(conversation.grades.scores[key].passed for conversation in scored) / len(scored) if scored else None for key in CRITERIA}}
+    passed = sum(
+        all(grade.passed for grade in conversation.grades.scores.values())
+        for conversation in scored
+    )
+    return {
+        "total": len(run.conversations),
+        "scored": len(scored),
+        "errors": len(run.conversations) - len(scored),
+        "passed": passed,
+        "rate": passed / len(scored) if scored else None,
+        "criteria": {
+            key: sum(conversation.grades.scores[key].passed for conversation in scored)
+            / len(scored)
+            if scored
+            else None
+            for key in CRITERIA
+        },
+    }
 
 
 def percent(value) -> str:
@@ -24,9 +44,15 @@ def percent(value) -> str:
 
 def run_markdown(run: Run) -> str:
     summary = summarize(run)
-    lines = [f"## agentprobe · {md(run.agent)}", "", f"**{percent(summary['rate'])}** conversation pass rate among {summary['scored']} scored; **{summary['errors']} errors**.",
-             f"Judge: {md(run.judge)} · {summary['total']} conversations · {run.duration_seconds:.3f}s · concurrency {run.concurrency}", "",
-             "| Criterion | Pass rate |", "|---|---:|"]
+    lines = [
+        f"## agentprobe · {md(run.agent)}",
+        "",
+        f"**{percent(summary['rate'])}** conversation pass rate among {summary['scored']} scored; **{summary['errors']} errors**.",
+        f"Judge: {md(run.judge)} · {summary['total']} conversations · {run.duration_seconds:.3f}s · concurrency {run.concurrency}",
+        "",
+        "| Criterion | Pass rate |",
+        "|---|---:|",
+    ]
     lines += [f"| {key} | {percent(rate)} |" for key, rate in summary["criteria"].items()]
     lines += ["", "### Failure evidence", ""]
     for conversation in run.conversations:
@@ -35,19 +61,35 @@ def run_markdown(run: Run) -> str:
         elif any(not grade.passed for grade in conversation.grades.scores.values()):
             for key, grade in conversation.grades.scores.items():
                 if not grade.passed:
-                    lines.append(f"- {md(conversation.scenario_id)} / {key}: {md(grade.reason)} — “{md(grade.evidence)}”")
+                    lines.append(
+                        f"- {md(conversation.scenario_id)} / {key}: {md(grade.reason)} — “{md(grade.evidence)}”"
+                    )
     if run.judge.startswith("mock:"):
-        lines += ["", "Offline demo: deterministic domain-specific oracle, not measured general LLM judge quality."]
+        lines += [
+            "",
+            "Offline demo: deterministic domain-specific oracle, not measured general LLM judge quality.",
+        ]
     return "\n".join(lines) + "\n"
 
 
 def comparison_markdown(comparison: Comparison) -> str:
-    lines = ["## agentprobe regression check", "", "**Significant regressions: " + ", ".join(comparison.regressions) + "**" if comparison.regressions else "**No significant regressions.**", "",
-             f"{comparison.n} paired conversations · {comparison.bootstrap_samples:,} bootstrap resamples · seed {comparison.seed} · 95% percentile intervals", "",
-             "| Criterion | Baseline | Candidate | Delta | 95% CI | Result |", "|---|---:|---:|---:|---:|---|"]
+    lines = [
+        "## agentprobe regression check",
+        "",
+        "**Significant regressions: " + ", ".join(comparison.regressions) + "**"
+        if comparison.regressions
+        else "**No significant regressions.**",
+        "",
+        f"{comparison.n} paired conversations · {comparison.bootstrap_samples:,} bootstrap resamples · seed {comparison.seed} · 95% percentile intervals",
+        "",
+        "| Criterion | Baseline | Candidate | Delta | 95% CI | Result |",
+        "|---|---:|---:|---:|---:|---|",
+    ]
     for key, metric in comparison.metrics.items():
         interval = metric.interval
-        lines.append(f"| {key} | {metric.baseline:.1%} | {metric.candidate:.1%} | {interval.delta*100:+.1f} pp | [{interval.ci_low*100:+.1f}, {interval.ci_high*100:+.1f}] pp | {'REGRESSION' if interval.regressed else '—'} |")
+        lines.append(
+            f"| {key} | {metric.baseline:.1%} | {metric.candidate:.1%} | {interval.delta * 100:+.1f} pp | [{interval.ci_low * 100:+.1f}, {interval.ci_high * 100:+.1f}] pp | {'REGRESSION' if interval.regressed else '—'} |"
+        )
     lines += ["", *[f"- {md(warning)}" for warning in comparison.warnings]]
     return "\n".join(lines) + "\n"
 
@@ -71,47 +113,76 @@ def render_html(run: Run) -> str:
     if run.judge.startswith("mock:"):
         body += '<p class="notice">Offline synthetic demo. A transparent rule oracle scores this domain; these are not general LLM quality measurements.</p>'
     body += '<section class="cards" aria-label="Run metrics">'
-    for label, value in [("Conversation pass rate", percent(summary["rate"])), ("Scored / total", f'{summary["scored"]} / {summary["total"]}'), ("Execution errors", summary["errors"]), ("Wall time", f'{run.duration_seconds:.3f}s')]:
+    for label, value in [
+        ("Conversation pass rate", percent(summary["rate"])),
+        ("Scored / total", f"{summary['scored']} / {summary['total']}"),
+        ("Execution errors", summary["errors"]),
+        ("Wall time", f"{run.duration_seconds:.3f}s"),
+    ]:
         body += f'<div class="card"><span class="value">{value}</span><span class="muted">{label}</span></div>'
     body += '</section><h2>Rubric scorecard</h2><p class="muted">Pass rates use scored conversations only. Any execution error makes a comparison ineligible.</p><table><thead><tr><th>Criterion</th><th>Pass rate</th></tr></thead><tbody>'
     for key, rate in summary["criteria"].items():
-        body += f'<tr><td>{key.replace("_", " ").title()}</td><td>{percent(rate)}</td></tr>'
-    body += '</tbody></table><h2>Persona coverage</h2><table><thead><tr><th>Persona</th><th>Conversations</th><th>Passed</th></tr></thead><tbody>'
+        body += f"<tr><td>{key.replace('_', ' ').title()}</td><td>{percent(rate)}</td></tr>"
+    body += "</tbody></table><h2>Persona coverage</h2><table><thead><tr><th>Persona</th><th>Conversations</th><th>Passed</th></tr></thead><tbody>"
     scenarios = {scenario.id: scenario for scenario in run.suite.scenarios}
     for persona in PERSONAS:
-        conversations = [conversation for conversation in run.conversations if scenarios[conversation.scenario_id].persona == persona]
-        passed = sum(conversation.grades is not None and all(grade.passed for grade in conversation.grades.scores.values()) for conversation in conversations)
-        body += f'<tr><td>{persona}</td><td>{len(conversations)}</td><td>{passed}</td></tr>'
+        conversations = [
+            conversation
+            for conversation in run.conversations
+            if scenarios[conversation.scenario_id].persona == persona
+        ]
+        passed = sum(
+            conversation.grades is not None
+            and all(grade.passed for grade in conversation.grades.scores.values())
+            for conversation in conversations
+        )
+        body += f"<tr><td>{persona}</td><td>{len(conversations)}</td><td>{passed}</td></tr>"
     body += '</tbody></table><h2>Conversation evidence</h2><p class="muted">Expand a trial to inspect user turns, assistant replies, attempted tools and judge evidence.</p>'
     for conversation in run.conversations:
         scenario = scenarios[conversation.scenario_id]
-        status = 'ERROR' if conversation.error else 'PASS' if all(grade.passed for grade in conversation.grades.scores.values()) else 'FAIL'
+        status = (
+            "ERROR"
+            if conversation.error
+            else "PASS"
+            if all(grade.passed for grade in conversation.grades.scores.values())
+            else "FAIL"
+        )
         body += f'<details><summary><span class="{"pass" if status == "PASS" else "fail"}">{status}</span> · {escape(scenario.persona)} · {escape(scenario.id)}</summary><p>{escape(scenario.objective)}</p>'
         if conversation.error:
             body += f'<p class="fail">{escape(conversation.error)}</p>'
         for message in conversation.messages:
-            if message.role == 'system':
+            if message.role == "system":
                 continue
             body += f'<div class="role">{message.role}</div><pre>{escape(message.content)}</pre>'
             for call in message.tool_calls:
-                body += f'<pre>Attempted tool (not executed): {escape(call.model_dump_json())}</pre>'
+                body += (
+                    f"<pre>Attempted tool (not executed): {escape(call.model_dump_json())}</pre>"
+                )
         if conversation.grades:
-            body += '<table><thead><tr><th>Criterion</th><th>Result / reason / quoted evidence</th></tr></thead><tbody>'
+            body += "<table><thead><tr><th>Criterion</th><th>Result / reason / quoted evidence</th></tr></thead><tbody>"
             for key, grade in conversation.grades.scores.items():
                 body += f'<tr><td>{key}</td><td><strong class="{"pass" if grade.passed else "fail"}">{"PASS" if grade.passed else "FAIL"}</strong> {escape(grade.reason)}<br><q>{escape(grade.evidence)}</q></td></tr>'
-            body += '</tbody></table>'
-        body += '</details>'
-    return page(f'agentprobe — {run.spec.name}', body)
+            body += "</tbody></table>"
+        body += "</details>"
+    return page(f"agentprobe — {run.spec.name}", body)
 
 
 def comparison_html(comparison: Comparison) -> str:
     body = '<header><div class="eyebrow">agentprobe / version comparison</div><h1>Catch the quiet regressions.</h1></header>'
-    body += '<p class="notice">' + (f'{len(comparison.regressions)} significant metric regressions detected.' if comparison.regressions else 'No significant regressions detected.') + '</p>'
-    body += f'<p>{comparison.n} paired conversations · {comparison.bootstrap_samples:,} resamples · 95% percentile confidence intervals</p>'
+    body += (
+        '<p class="notice">'
+        + (
+            f"{len(comparison.regressions)} significant metric regressions detected."
+            if comparison.regressions
+            else "No significant regressions detected."
+        )
+        + "</p>"
+    )
+    body += f"<p>{comparison.n} paired conversations · {comparison.bootstrap_samples:,} resamples · 95% percentile confidence intervals</p>"
     body += '<div class="scroll"><table><thead><tr><th>Metric</th><th>Baseline</th><th>Candidate</th><th>Delta</th><th>95% CI</th></tr></thead><tbody>'
     for key, metric in comparison.metrics.items():
         interval = metric.interval
-        body += f'<tr><td>{escape(key)}</td><td>{metric.baseline:.1%}</td><td>{metric.candidate:.1%}</td><td class="{"fail" if interval.regressed else "pass"}">{interval.delta*100:+.1f} pp</td><td>[{interval.ci_low*100:+.1f}, {interval.ci_high*100:+.1f}] pp</td></tr>'
-    body += '</tbody></table></div>'
-    body += ''.join(f'<p class="muted">{escape(warning)}</p>' for warning in comparison.warnings)
-    return page('agentprobe — regression comparison', body)
+        body += f'<tr><td>{escape(key)}</td><td>{metric.baseline:.1%}</td><td>{metric.candidate:.1%}</td><td class="{"fail" if interval.regressed else "pass"}">{interval.delta * 100:+.1f} pp</td><td>[{interval.ci_low * 100:+.1f}, {interval.ci_high * 100:+.1f}] pp</td></tr>'
+    body += "</tbody></table></div>"
+    body += "".join(f'<p class="muted">{escape(warning)}</p>' for warning in comparison.warnings)
+    return page("agentprobe — regression comparison", body)

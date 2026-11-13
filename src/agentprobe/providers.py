@@ -17,21 +17,36 @@ class ProviderError(RuntimeError):
 class Provider(Protocol):
     name: str
 
-    async def chat(self, messages: list[Message], *, json_mode: bool = False, tools: list[Tool] = ()) -> Reply: ...
+    async def chat(
+        self, messages: list[Message], *, json_mode: bool = False, tools: list[Tool] = ()
+    ) -> Reply: ...
 
 
 def wire_message(message: Message) -> dict:
     data = {"role": message.role, "content": message.content}
     if message.tool_calls:
-        data["tool_calls"] = [{"id": call.id, "type": "function", "function": {
-            "name": call.name, "arguments": json.dumps(call.arguments)}} for call in message.tool_calls]
+        data["tool_calls"] = [
+            {
+                "id": call.id,
+                "type": "function",
+                "function": {"name": call.name, "arguments": json.dumps(call.arguments)},
+            }
+            for call in message.tool_calls
+        ]
     return data
 
 
 class OpenAIProvider:
     def __init__(self, client: httpx.AsyncClient, base_url: str, key: str, model: str):
         url = urlsplit(base_url)
-        if url.scheme not in {"http", "https"} or not url.hostname or url.username or url.password or url.query or url.fragment:
+        if (
+            url.scheme not in {"http", "https"}
+            or not url.hostname
+            or url.username
+            or url.password
+            or url.query
+            or url.fragment
+        ):
             raise ValueError("Provider URL must be HTTP(S), without credentials, query or fragment")
         if not model.strip():
             raise ValueError("Provider model must not be empty")
@@ -43,8 +58,14 @@ class OpenAIProvider:
         self.model = model
         self.name = f"openai-compatible:{model}"
 
-    async def chat(self, messages: list[Message], *, json_mode: bool = False, tools: list[Tool] = ()) -> Reply:
-        body = {"model": self.model, "messages": [wire_message(message) for message in messages], "temperature": 0}
+    async def chat(
+        self, messages: list[Message], *, json_mode: bool = False, tools: list[Tool] = ()
+    ) -> Reply:
+        body = {
+            "model": self.model,
+            "messages": [wire_message(message) for message in messages],
+            "temperature": 0,
+        }
         if json_mode:
             body["response_format"] = {"type": "json_object"}
         if tools:
@@ -64,9 +85,16 @@ class OpenAIProvider:
             message = choice["message"]
             if message.get("role") != "assistant":
                 raise ValueError("Expected assistant reply")
-            calls = [ToolCall(id=call["id"], name=call["function"]["name"],
-                              arguments=json.loads(call["function"]["arguments"]))
-                     for call in message.get("tool_calls", [])]
+            calls = [
+                ToolCall(
+                    id=call["id"],
+                    name=call["function"]["name"],
+                    arguments=json.loads(call["function"]["arguments"]),
+                )
+                for call in message.get("tool_calls", [])
+            ]
             return Reply(content=message.get("content") or "", tool_calls=calls)
         except (KeyError, IndexError, TypeError, ValueError, ValidationError):
-            raise ProviderError("Chat endpoint returned an invalid or incomplete completion") from None
+            raise ProviderError(
+                "Chat endpoint returned an invalid or incomplete completion"
+            ) from None

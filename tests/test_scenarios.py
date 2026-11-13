@@ -3,8 +3,8 @@ import json
 import pytest
 
 from agentprobe.demo_agents import demo_spec
-from agentprobe.models import PERSONAS, Reply
 from agentprobe.mock import MockProvider
+from agentprobe.models import PERSONAS, Reply
 from agentprobe.scenarios import generate_suite
 
 
@@ -35,7 +35,11 @@ async def test_missing_persona_from_model_is_rejected():
         name = "bad"
 
         async def chat(self, messages, **kwargs):
-            return Reply(content=json.dumps({"scenarios": [{"persona": "angry", "objective": "test", "turns": ["hi"]}]}))
+            return Reply(
+                content=json.dumps(
+                    {"scenarios": [{"persona": "angry", "objective": "test", "turns": ["hi"]}]}
+                )
+            )
 
     with pytest.raises(ValueError, match="persona"):
         await generate_suite(demo_spec(), IncompleteProvider(), per_persona=1, seed=1)
