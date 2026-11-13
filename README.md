@@ -214,8 +214,12 @@ This measures scheduling and harness overhead, **not real LLM throughput**. Raw 
 ```bash
 uv run ruff check .
 uv run ruff format --check .
-uv run pytest --cov=agentprobe --cov-report=term-missing
+uv run pytest --cov=agentprobe --cov-report=term-missing --cov-fail-under=90
 ```
+
+Observed: **87 tests passed; 96.39% combined statement/branch coverage**. The same install,
+tests and seeded demo passed in a fresh local clone. The built wheel also ran the demo
+offline. [Verification evidence](evidence.md) records the commands, scope and limitations.
 
 Tests cover local HTTP wire contracts, sync/async callables, concurrency limits, full
 histories, timeout/error isolation, judge evidence, schema corruption, known kappa tables,
