@@ -57,11 +57,32 @@ class AgentSpec(Model):
         return hashlib.sha256(data.encode()).hexdigest()
 
 
+class Branch(Model):
+    after_turn: int = Field(ge=1, le=10, strict=True)
+    contains: Text
+    next_turn: int = Field(ge=2, le=10, strict=True)
+
+
 class Scenario(Model):
     id: Text
     persona: Persona
     objective: Text
     turns: list[Text] = Field(min_length=1, max_length=10)
+    branches: list[Branch] = Field(default_factory=list, max_length=100)
+
+    @model_validator(mode="after")
+    def forward_branches(self):
+        if any(
+            not branch.after_turn < branch.next_turn <= len(self.turns) for branch in self.branches
+        ):
+            raise ValueError("Branch destinations must be forward and within the plan")
+        return self
+
+    def following_turn(self, after_turn: int, reply: str) -> int:
+        for branch in self.branches:
+            if branch.after_turn == after_turn and branch.contains.casefold() in reply.casefold():
+                return branch.next_turn
+        return after_turn + 1
 
 
 class Suite(Model):

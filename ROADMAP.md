@@ -6,11 +6,11 @@ Local-only milestone. No paid model evaluation or remote publication is implied.
 
 ### 01. Resilient provider transport and accounting
 
-- Status: planned
+- Status: complete
 - Problem: Transient judge requests currently fail immediately; token cost and request latency are invisible.
 - Acceptance: Retry opt-in 429/5xx and connection failures within a bound; never retry target agents by default. Persist attempts, elapsed time, token usage and optional explicit-price cost without keys.
 - Test plan: Local HTTP/transport tests cover retries, exhaustion, malformed usage, price validation, authentication failures and accounting.
-- Delivery commits: pending
+- Delivery commits: `4cafaf6..1d22b89`
 
 ### 02. Reply-dependent conversation plans
 

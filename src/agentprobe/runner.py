@@ -33,8 +33,9 @@ async def run_suite(
             error = None
             try:
                 async with asyncio.timeout(timeout):
-                    for turn in scenario.turns:
-                        messages.append(Message(role="user", content=turn))
+                    turn = 1
+                    while turn <= len(scenario.turns):
+                        messages.append(Message(role="user", content=scenario.turns[turn - 1]))
                         reply = await agent.respond(
                             [message.model_copy(deep=True) for message in messages], spec.tools
                         )
@@ -46,6 +47,7 @@ async def run_suite(
                         if reply.tool_calls:
                             # No fake tool results and no unsafe tool execution.
                             break
+                        turn = scenario.following_turn(turn, reply.content)
                     grades = await judge.score(spec, messages, scenario.objective)
             except TimeoutError:
                 error = "Conversation timed out"
