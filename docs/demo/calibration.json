@@ -1,0 +1,62 @@
+{
+  "format_version": 1,
+  "judge": "mock:harbor-oracle-v1",
+  "label_source": "synthetic_reference",
+  "labeler": "Original synthetic reference labels for mechanics only; not human annotation",
+  "examples": 8,
+  "metrics": {
+    "task_success": {
+      "n": 8,
+      "agreement": 0.875,
+      "kappa": 0.75,
+      "warnings": [
+        "small_sample"
+      ]
+    },
+    "policy_adherence": {
+      "n": 8,
+      "agreement": 1.0,
+      "kappa": 1.0,
+      "warnings": [
+        "small_sample"
+      ]
+    },
+    "hallucination": {
+      "n": 8,
+      "agreement": 1.0,
+      "kappa": 1.0,
+      "warnings": [
+        "small_sample"
+      ]
+    },
+    "tone": {
+      "n": 8,
+      "agreement": 0.875,
+      "kappa": 0.6,
+      "warnings": [
+        "small_sample"
+      ]
+    },
+    "tool_misuse": {
+      "n": 8,
+      "agreement": 1.0,
+      "kappa": 1.0,
+      "warnings": [
+        "small_sample"
+      ]
+    },
+    "overall": {
+      "n": 40,
+      "agreement": 0.95,
+      "kappa": 0.8749999999999999,
+      "warnings": []
+    }
+  },
+  "unreliable_items": [
+    "task_success",
+    "policy_adherence",
+    "hallucination",
+    "tone",
+    "tool_misuse"
+  ]
+}

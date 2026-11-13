@@ -1,0 +1,8 @@
+$ uv run agentprobe demo --out .agentprobe/readme-demo --seed 42 --per-persona 4 --samples 10000
+agentprobe · offline regression demo
+Good: 24/24 conversations passed (100.0%); 0 errors
+Broken: 4/24 conversations passed (16.7%); 0 errors
+Significant metric regressions: overall, task_success, policy_adherence, hallucination, tone, tool_misuse
+Overall delta: -83.3 pp; 95% CI [-95.8, -66.7] pp
+Judge agreement against synthetic reference labels: 95.0%; kappa 0.875 (8 transcripts)
+Reports: .agentprobe/readme-demo/index.html, summary.md, diff.json, calibration.json

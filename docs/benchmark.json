@@ -1,0 +1,14 @@
+{
+  "command": "uv run python benchmarks/runner.py --per-persona 4 --latency-ms 10 --concurrency 8 --repeats 3",
+  "workload": "synthetic sleep per target reply; not real LLM throughput",
+  "seed": 42,
+  "conversations": 24,
+  "turns_per_conversation": 3,
+  "latency_ms": 10.0,
+  "repeats": 3,
+  "timings": {
+    "1": {"seconds": [0.8365283330203965, 0.8483587079681456, 0.8723625839920714], "median_seconds": 0.8483587079681456},
+    "8": {"seconds": [0.1267535419901833, 0.12681979197077453, 0.12226308300159872], "median_seconds": 0.1267535419901833}
+  },
+  "speedup": 6.692978315618578
+}

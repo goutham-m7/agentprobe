@@ -87,3 +87,49 @@ UI, adaptive simulator, judge fine-tuning, multiple-testing correction or causal
 Roadmap: sandbox tool adapters, human review UI, calibrated model comparisons and cluster
 bootstrap by scenario family. Real provider behavior requires user credentials and an
 independent human-labelled dataset; offline CI cannot validate a paid model's quality.
+
+## Interview notes
+
+### 1. Paired evidence, not two unrelated averages
+The diff accepts the exact same suite, spec, and judge identity. Each observation is
+one candidate-minus-baseline conversation outcome. Resampling turns was rejected because
+history makes them dependent; unpaired resampling wastes the matched design. Seeded
+percentile intervals are explainable and dependency-free. They do not solve correlated
+templates, model drift or multiple comparisons. The mock's related scenario variants are
+an explicit demonstration limitation, not a claim about production users.
+
+### 2. Timeouts must not become quality scores
+Concurrency is bounded around the entire conversation plus its judgment. Exceptions
+produce an error artifact, not a failed rubric or a disappearing row. A comparison rejects
+any such run. Silently dropping failures was rejected because it creates survivorship bias.
+Synchronous callables run in threads to avoid blocking the event loop. Python cannot
+forcibly kill these threads: cancellation records a timeout but the function can keep
+running, exceed scheduled-conversation concurrency, and delay interpreter shutdown.
+Cooperative client deadlines or a separate process/HTTP sandbox are required for those
+targets. A subprocess supervisor was rejected for this release because arbitrary local
+callables and closures are not uniformly serializable across platforms.
+
+### 3. The judge needs its own evidence
+Every criterion is binary and grounded in a nonempty assistant quote. Unknown, missing,
+duplicate or fabricated judgment evidence is rejected. This validates provenance, not
+semantics. A real quote can support a wrong verdict, so calibration remains a separate
+boundary. Reference provenance is mandatory: `human` and `synthetic_reference` are never
+interchangeable. The bundled references are synthetic and intentionally include ambiguity.
+No human reliability claim is made. Giving the mock a persona-ID-to-score lookup was
+rejected: it inspects actual assistant text and tool attempts instead.
+
+### At 100× scale
+Shard persisted suites into independently resumable conversation jobs with immutable
+artifact IDs. Add provider-wide request/token budgets and rate-limit backpressure before
+raising concurrency. Stream traces to object storage; reduce summaries independently.
+Vectorize bootstrap draws or store sparse paired deltas once profiling shows it necessary.
+Use cluster bootstrap for related scenario families and predeclared multiplicity controls
+for release gates. Separate process workers would enforce hard callable deadlines.
+Do not add a hosted dashboard until artifact volume makes static reports inadequate.
+
+## Annotation provenance
+`data/reference-labels.json` is an original synthetic reference dataset, not human labels.
+`examples/human-labels.template.json` deliberately has null labels and cannot be calibrated
+until a human fills them. Cohen's kappa and percentage agreement accept either provenance,
+and every output preserves it. The bundled eight-transcript agreement demonstrates the
+calculation only; it cannot certify a real model or a rubric's human reliability.

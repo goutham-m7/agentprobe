@@ -1,0 +1,83 @@
+{
+  "format_version": 1,
+  "baseline_id": "517041f413c0",
+  "candidate_id": "c06dee400823",
+  "n": 24,
+  "seed": 42,
+  "bootstrap_samples": 10000,
+  "confidence": 0.95,
+  "metrics": {
+    "overall": {
+      "baseline": 1.0,
+      "candidate": 0.16666666666666666,
+      "interval": {
+        "delta": -0.8333333333333334,
+        "ci_low": -0.9583333333333334,
+        "ci_high": -0.6666666666666666,
+        "regressed": true
+      }
+    },
+    "task_success": {
+      "baseline": 1.0,
+      "candidate": 0.16666666666666666,
+      "interval": {
+        "delta": -0.8333333333333334,
+        "ci_low": -0.9583333333333334,
+        "ci_high": -0.6666666666666666,
+        "regressed": true
+      }
+    },
+    "policy_adherence": {
+      "baseline": 1.0,
+      "candidate": 0.3333333333333333,
+      "interval": {
+        "delta": -0.6666666666666666,
+        "ci_low": -0.8333333333333334,
+        "ci_high": -0.4583333333333333,
+        "regressed": true
+      }
+    },
+    "hallucination": {
+      "baseline": 1.0,
+      "candidate": 0.6666666666666666,
+      "interval": {
+        "delta": -0.3333333333333333,
+        "ci_low": -0.5416666666666666,
+        "ci_high": -0.16666666666666666,
+        "regressed": true
+      }
+    },
+    "tone": {
+      "baseline": 1.0,
+      "candidate": 0.8333333333333334,
+      "interval": {
+        "delta": -0.16666666666666666,
+        "ci_low": -0.3333333333333333,
+        "ci_high": -0.041666666666666664,
+        "regressed": true
+      }
+    },
+    "tool_misuse": {
+      "baseline": 1.0,
+      "candidate": 0.8333333333333334,
+      "interval": {
+        "delta": -0.16666666666666666,
+        "ci_low": -0.3333333333333333,
+        "ci_high": -0.041666666666666664,
+        "regressed": true
+      }
+    }
+  },
+  "regressions": [
+    "overall",
+    "task_success",
+    "policy_adherence",
+    "hallucination",
+    "tone",
+    "tool_misuse"
+  ],
+  "warnings": [
+    "Intervals are paired conversation-level percentile bootstrap; unadjusted for multiple comparisons.",
+    "Intervals describe this empirical suite, not all users; related templates can reduce effective sample size."
+  ]
+}
