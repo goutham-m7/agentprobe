@@ -84,6 +84,8 @@ def bootstrap_agreement(
         [value for row in reference for value in row],
         [value for row in predicted for value in row],
     )
+    if len(reference) < 20 and "small_sample" not in result.warnings:
+        result.warnings.append("small_sample")
     # Precompute transcript counts; preserve each transcript as the sampling unit.
     rows = [
         (sum(a == b for a, b in zip(left, right, strict=True)), sum(left), sum(right))

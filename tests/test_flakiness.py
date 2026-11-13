@@ -1,4 +1,5 @@
 import json
+import os
 import subprocess
 import sys
 from importlib.resources import files
@@ -120,3 +121,55 @@ def test_cli_rejects_repeat_bounds_before_running(tmp_path, repeats):
     assert result.returncode == 2
     assert "repeats must be 2..100" in result.stderr
     assert not out.exists()
+
+
+@pytest.mark.parametrize("behavior,expected", [("flip", 1), ("error", 2)])
+def test_repeat_cli_gates_flips_and_preserves_errors(tmp_path, behavior, expected):
+    module = tmp_path / "target_fixture.py"
+    if behavior == "flip":
+        module.write_text(
+            "calls = 0\n"
+            "async def agent(messages):\n"
+            "    global calls\n"
+            "    calls += 1\n"
+            "    return 'Learn to read.' if calls % 2 else 'Unopened items can be returned within 30 days with a receipt.'\n"
+        )
+    else:
+        module.write_text("async def agent(messages):\n    raise RuntimeError('private')\n")
+    suite = Suite(
+        spec_fingerprint=demo_spec().fingerprint,
+        seed=1,
+        scenarios=[
+            Scenario(id="one", persona="angry", objective="Help politely", turns=["Return?"])
+        ],
+    )
+    source = tmp_path / "suite.json"
+    source.write_text(suite.model_dump_json())
+    out = tmp_path / "repeated"
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "agentprobe",
+            "repeat",
+            str(files("agentprobe").joinpath("data/harbor.yaml")),
+            "--suite",
+            str(source),
+            "--callable",
+            "target_fixture:agent",
+            "--repeats",
+            "3",
+            "--fail-on-flaky",
+            "--out",
+            str(out),
+        ],
+        env={**os.environ, "PYTHONPATH": str(tmp_path)},
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    assert result.returncode == expected, result.stderr
+    report = json.loads((out / "flakiness.json").read_text())
+    assert report["errors"] == (3 if behavior == "error" else 0)
+    assert report["flaky_scenarios"] == (1 if behavior == "flip" else 0)
+    assert "private" not in (out / "run-001/run.json").read_text()

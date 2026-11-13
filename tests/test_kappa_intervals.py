@@ -32,6 +32,7 @@ def test_cluster_bootstrap_keeps_rubric_decisions_together():
     assert result.kappa == 0
     assert result.ci_low < 0 < result.ci_high
     assert result.n == 20
+    assert "small_sample" in result.warnings  # Ten independent transcripts, not 20 decisions.
 
 
 @pytest.mark.parametrize(

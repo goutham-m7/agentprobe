@@ -58,6 +58,10 @@ def compare(baseline: Run, candidate: Run, *, samples: int, seed: int) -> Compar
         "Intervals are paired conversation-level percentile bootstrap; unadjusted for multiple comparisons.",
         "Intervals describe this empirical suite, not all users; related templates can reduce effective sample size.",
     ]
+    if any(scenario.branches for scenario in baseline.suite.scenarios):
+        warnings.append(
+            "Adaptive plans pair policies, not fixed conversations: realized user prompts may differ."
+        )
     if len(baseline.conversations) < 20:
         warnings.append("Small sample: fewer than 20 paired conversations.")
     return Comparison(

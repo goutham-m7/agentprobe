@@ -113,3 +113,19 @@ def test_mock_is_cli_default():
     assert (
         parser().parse_args(["generate", "contract.yaml", "--out", "suite.json"]).provider == "mock"
     )
+
+
+@pytest.mark.asyncio
+async def test_connection_establishment_failure_is_retryable():
+    attempts = []
+
+    def remote(request):
+        attempts.append(request)
+        if len(attempts) == 1:
+            raise httpx.ConnectError("private")
+        return response()
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(remote)) as client:
+        provider = OpenAIProvider(client, "https://local", "", "m", retries=1)
+        assert (await provider.chat([])).content == "ok"
+    assert provider.accounting()["attempts"] == 2
