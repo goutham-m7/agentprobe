@@ -220,6 +220,8 @@ async def demo(args) -> int:
 
 
 async def execute(args) -> int:
+    if args.out is not None and args.out.exists():
+        raise FileExistsError(f"Refusing to overwrite {args.out}; choose a new --out")
     if args.command == "demo":
         return await demo(args)
     if args.command == "diff":

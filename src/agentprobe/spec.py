@@ -7,9 +7,22 @@ import yaml
 from agentprobe.models import AgentSpec, Criterion
 
 
+class UniqueSafeLoader(yaml.SafeLoader):
+    def construct_mapping(self, node, deep=False):
+        mapping = {}
+        for key_node, value_node in node.value:
+            key = self.construct_object(key_node, deep=deep)
+            if not isinstance(key, str):
+                raise ValueError("YAML mapping keys must be strings")
+            if key in mapping:
+                raise ValueError("Spec contains duplicate YAML keys")
+            mapping[key] = self.construct_object(value_node, deep=deep)
+        return mapping
+
+
 def load_spec(path: Path) -> AgentSpec:
     try:
-        data = yaml.safe_load(path.read_text(encoding="utf-8"))
+        data = yaml.load(path.read_text(encoding="utf-8"), Loader=UniqueSafeLoader)
     except yaml.YAMLError as exc:
         raise ValueError("Invalid YAML spec") from exc
     return AgentSpec.model_validate(data)

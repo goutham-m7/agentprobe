@@ -1,5 +1,6 @@
 """Minimal OpenAI-compatible transport; no credentials enter persisted artifacts."""
 
+import hashlib
 import json
 from typing import Protocol
 from urllib.parse import urlsplit
@@ -56,7 +57,8 @@ class OpenAIProvider:
             self.endpoint += "/chat/completions"
         self.key = key
         self.model = model
-        self.name = f"openai-compatible:{model}"
+        endpoint_id = hashlib.sha256(self.endpoint.encode()).hexdigest()[:12]
+        self.name = f"openai-compatible:{model}@{endpoint_id}"
 
     async def chat(
         self, messages: list[Message], *, json_mode: bool = False, tools: list[Tool] = ()
@@ -94,7 +96,7 @@ class OpenAIProvider:
                 for call in message.get("tool_calls", [])
             ]
             return Reply(content=message.get("content") or "", tool_calls=calls)
-        except (KeyError, IndexError, TypeError, ValueError, ValidationError):
+        except (KeyError, IndexError, AttributeError, TypeError, ValueError, ValidationError):
             raise ProviderError(
                 "Chat endpoint returned an invalid or incomplete completion"
             ) from None
