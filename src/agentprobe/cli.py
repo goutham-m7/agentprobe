@@ -2,6 +2,7 @@
 
 import argparse
 import asyncio
+import json
 import os
 import sys
 from datetime import UTC, datetime
@@ -41,7 +42,7 @@ def provider_options(parser):
     parser.add_argument(
         "--provider",
         choices=["mock", "openai"],
-        default="openai",
+        default="mock",
         help="mock only supports the bundled Harbor demo contract",
     )
     parser.add_argument("--base-url", help="OpenAI-compatible base URL (or AGENTPROBE_BASE_URL)")
@@ -51,6 +52,9 @@ def provider_options(parser):
         default="AGENTPROBE_API_KEY",
         help="Environment variable holding judge/generator key",
     )
+    parser.add_argument("--retries", type=int, default=2, help="Judge/generator retries, 0..5")
+    parser.add_argument("--input-price", type=float, help="USD per million input tokens")
+    parser.add_argument("--output-price", type=float, help="USD per million output tokens")
 
 
 def parser() -> argparse.ArgumentParser:
@@ -83,6 +87,8 @@ def parser() -> argparse.ArgumentParser:
     target.add_argument("--endpoint", help="OpenAI-compatible target chat endpoint or base URL")
     run.add_argument("--target-model")
     run.add_argument("--agent-key-env", default="AGENTPROBE_AGENT_KEY")
+    run.add_argument("--target-input-price", type=float)
+    run.add_argument("--target-output-price", type=float)
     run.add_argument("--suite", type=Path)
     run.add_argument("--out", type=Path)
     run.add_argument("--concurrency", type=int, default=6)
@@ -123,7 +129,24 @@ def make_provider(args, client):
     if not model:
         raise ValueError("Set --model or AGENTPROBE_MODEL for the real provider")
     base_url = args.base_url or os.environ.get("AGENTPROBE_BASE_URL", "https://api.openai.com/v1")
-    return OpenAIProvider(client, base_url, os.environ.get(args.key_env, ""), model)
+    return OpenAIProvider(
+        client,
+        base_url,
+        os.environ.get(args.key_env, ""),
+        model,
+        retries=args.retries,
+        input_price=args.input_price,
+        output_price=args.output_price,
+    )
+
+
+def write_usage(path: Path, provider, agent=None) -> None:
+    usage = {}
+    if isinstance(provider, OpenAIProvider):
+        usage["judge_generator"] = provider.accounting()
+    if isinstance(agent, HttpAgent):
+        usage["target"] = agent.provider.accounting()
+    new_file(path, json.dumps(usage, indent=2) + "\n")
 
 
 def calibration_text(result) -> str:
@@ -261,6 +284,7 @@ async def execute(args) -> int:
                 encoding="utf-8",
             )
             print(text, end="")
+            write_usage(args.out / "usage.json", provider)
             return 0
         spec = load_spec(args.spec)
         if args.command == "generate":
@@ -268,6 +292,7 @@ async def execute(args) -> int:
                 spec, provider, per_persona=args.per_persona, seed=args.seed
             )
             new_file(args.out, suite.model_dump_json(indent=2) + "\n")
+            write_usage(args.out.with_suffix(args.out.suffix + ".usage.json"), provider)
             print(f"Generated {len(suite.scenarios)} scenarios across six personas: {args.out}")
             return 0
         if args.callable_target:
@@ -277,7 +302,12 @@ async def execute(args) -> int:
                 raise ValueError("--target-model is required with --endpoint")
             agent = HttpAgent(
                 OpenAIProvider(
-                    client, args.endpoint, os.environ.get(args.agent_key_env, ""), args.target_model
+                    client,
+                    args.endpoint,
+                    os.environ.get(args.agent_key_env, ""),
+                    args.target_model,
+                    input_price=args.target_input_price,
+                    output_price=args.target_output_price,
                 )
             )
         suite = (
@@ -290,6 +320,7 @@ async def execute(args) -> int:
         )
         directory = args.out or default_directory("run")
         write_run(result, directory)
+        write_usage(directory / "usage.json", provider, agent)
         summary = summarize(result)
         print(
             f"{summary['passed']}/{summary['total']} conversations passed; {summary['errors']} errors; reports: {directory}"
