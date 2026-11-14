@@ -7,7 +7,7 @@
 Teams changing an agent's prompt or model can ship worse behavior without noticing:
 a successful example conversation does not establish that policies still hold across turns.
 
-- OpenAI [rolled back a GPT-4o update](https://openai.com/blog/sycophancy-in-gpt-4o)
+- OpenAI [rolled back a GPT-4o update](https://openai.com/index/sycophancy-in-gpt-4o/)
   after it became overly agreeable; its incident report says short-term feedback
   failed to account for how interactions evolve over time (2025-04-29).
 - OpenAI's [evaluation guidance](https://developers.openai.com/api/docs/guides/evaluation-best-practices)
