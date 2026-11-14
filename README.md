@@ -2,6 +2,23 @@
 
 **CI for AI agents: concurrent conversation tests, judge calibration, and paired regression diffs.**
 
+## The problem
+
+Teams changing an agent's prompt or model can ship worse behavior without noticing:
+a successful example conversation does not establish that policies still hold across turns.
+
+- OpenAI [rolled back a GPT-4o update](https://openai.com/blog/sycophancy-in-gpt-4o)
+  after it became overly agreeable; its incident report says short-term feedback
+  failed to account for how interactions evolve over time (2025-04-29).
+- OpenAI's [evaluation guidance](https://developers.openai.com/api/docs/guides/evaluation-best-practices)
+  says generative variability makes traditional testing insufficient, recommends
+  continuous evaluation on every change, and warns against uncalibrated automated
+  scoring (undated; accessed 2026-11-14).
+
+agentprobe compares versions on reusable conversation suites, preserves transcript
+evidence, and reports paired regression intervals and judge calibration; its bundled
+results remain synthetic demonstrations, not evidence of real-model reliability.
+
 An agent can pass its happy-path tests and still leak a policy detail on the third turn.
 agentprobe keeps the conversation evidence and tests whether a version got worse.
 The runner, artifact validation, Cohen's kappa, and bootstrap intervals work without an LLM.
